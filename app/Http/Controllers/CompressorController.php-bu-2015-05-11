@@ -1,0 +1,922 @@
+<?php namespace App\Http\Controllers;
+
+class CompressorController extends Controller {
+	/*
+	|--------------------------------------------------------------------------
+	| Compressor Controller
+	|--------------------------------------------------------------------------
+	|
+	|
+	*/
+	/**
+	 * Create a new controller instance.
+	 *
+	 * @return void
+	 */
+
+	public function __construct()
+	{
+		$this->middleware('auth');
+	}
+
+	/**
+	 * Show the application welcome screen to the user.
+	 *
+	 * @return Response
+	 */
+	public function index()
+	{
+		return view('maindialogs/preselect');
+	}
+
+	public function getUnitOneValues($B11){
+		//L10 thru L18
+		$unitsOneDefaults['psia']=$B11;
+		$unitsOneDefaults['HG']=$unitsOneDefaults['psia']*0.4912;
+		$unitsOneDefaults['H20']=$unitsOneDefaults['psia']*0.03613;
+		$unitsOneDefaults['mmHG']=$unitsOneDefaults['psia']*0.4912/25.4;
+		$unitsOneDefaults['kg_cm2']=$unitsOneDefaults['psia']*14.226;
+		$unitsOneDefaults['mmH20']=$unitsOneDefaults['psia']*0.03613/25.4;
+		$unitsOneDefaults['Bara']=$unitsOneDefaults['psia']*14.504;
+		$unitsOneDefaults['mBara']=$unitsOneDefaults['psia']*0.014504;
+		$unitsOneDefaults['kPa']=$unitsOneDefaults['psia']*0.14504;
+
+/*
+		$unitsOneDefaults['Other_psia']=
+		$unitsOneDefaults['Other_HG']=
+		$unitsOneDefaults['Other_H20']=
+		$unitsOneDefaults['Other_mmHG']=
+		$unitsOneDefaults['Other_kg_cm2']=
+		$unitsOneDefaults['Other_mmH20']=
+		$unitsOneDefaults['Other_Bara']=
+		$unitsOneDefaults['Other_mBara']=
+		$unitsOneDefaults['Other_kPa']=*/
+
+		return $unitsOneDefaults;
+	}
+
+	public function getUnitTwoValues($B13, $B27, $B32){
+		//L25 thru L34
+		$unitsTwoDefaults['psig']=$B27+$B13;
+		$unitsTwoDefaults['HG']=($B27*0.4912)+$B13;
+		$unitsTwoDefaults['H20']=($B27*0.03613)+$B13;
+		$unitsTwoDefaults['mmHG']=$B27/51.71+$B13;
+		$unitsTwoDefaults['kg_cm2']=($B27*14.226)+$B13;
+		$unitsTwoDefaults['psia']=$B27;
+		$unitsTwoDefaults['mmH20']=$B27*0.03613/25.4+$B13;
+		$unitsTwoDefaults['Barg']=($B27*14.504)+$B13;
+		$unitsTwoDefaults['mBarg']=($B27*0.014504)+$B13;
+		$unitsTwoDefaults['kPa']=($B27*0.14504)+$B13;
+
+		$unitsTwoDefaults['discharge_psig']=$B32+$B13;
+		$unitsTwoDefaults['discharge_HG']=($B32*0.4912)+$B13;
+		$unitsTwoDefaults['discharge_H20']=$B32*0.03613+$B13;
+		$unitsTwoDefaults['discharge_mmHG']=$B32/51.71+$B13;
+		$unitsTwoDefaults['discharge_kg_cm2']=$B32*14.226+$B13;
+		$unitsTwoDefaults['discharge_psia']=$B32;
+		$unitsTwoDefaults['discharge_mmH20']=$B32*0.03613/25.4+$B13;
+		$unitsTwoDefaults['discharge_Barg']=($B32*14.504)+$B13;
+		$unitsTwoDefaults['discharge_mBarg']=($B32*0.014504)+$B13;
+		$unitsTwoDefaults['discharge_kPa']=($B32*0.14504)+$B13;
+		
+		return $unitsTwoDefaults;
+	}
+
+	public function mainPanelFormSubmitted(){
+		
+		$data = array();
+		//B1 thru B54
+		$defaults ['elevation'] =25.00;
+		$defaults ['ambient'] =25.00;
+		$defaults ['ambient_pressure'] =25.00;//calculated
+		$defaults ['name_of_gas'] ='Air';
+		$defaults ['molecular_weight'] =28.980;
+		$defaults ['specific_gravity'] =1.00;
+		$defaults ['cp_cv'] =1.4;
+		$defaults ['gas_inlet_temperature'] =90.00;
+		$defaults ['inlet_temperature'] =90.00;//calculated
+		$defaults ['gas_inlet_pressure'] =0.00;
+		$defaults ['inlet_pressure'] =0.00; //calculated
+		$defaults ['gas_discharge_pressure'] =28.00;
+		$defaults ['discharge_pressure'] =25.00;//calculated
+		$defaults ['compression_ration'] =25.00;//calculated
+		$defaults ['flowrate'] =2000.00;
+		$defaults ['coolant_temperature'] =100;
+		$defaults ['manual_selection'] ='c400';
+		$defaults ['fixed_speed'] =0.00;
+
+		$inputs = \Request::input();
+
+		$psia_k11='';//B11, user input shit...
+		//$
+
+		if ($inputs['product_type']=='Air'){
+			$data['label_product_type'] = 'Name of Gas';
+			$data['B16'] = $defaults ['name_of_gas'];
+		} else {
+			$data['label_product_type'] = 'Enter Name of Gas';
+			$data['B16'] = '';
+		}
+
+		$data['B18'] = $defaults ['specific_gravity'];
+		$data['B19'] = $defaults ['cp_cv'];
+		$data['B32'] = $defaults ['gas_discharge_pressure'];
+
+		if ($inputs['ambient_pressure_or_elevation']=="ambient_pressure_pressed"){
+			$data['label_pressure_or_elevation'] = 'Pressure';
+			$data['h2_2_8'] = 0;
+			$data['10_1'] = '';
+			$data['11_1'] = 'Pressure';
+			$data['12_1'] = '';
+			$data['10_2'] = '';
+			$data['10_3'] = '';
+			$data['12_2'] = '';
+			$data['12_3'] = '';
+//			$data['7_9'] = '';
+
+			$data['B11'] = $defaults ['ambient'];
+
+			$data['h3_3_8'] = 0;
+			$unitsOneDefaults = $this->getUnitOneValues($data['B11']);
+
+
+			//=IF(H2=1,$I$10,VLOOKUP(H3,$J$10:$L$18,3))
+			//simplified, check the ambient_pressure_unit (psia, mbara, kpa etc) and set b13 to $unitsOneDefaults[ambient_pressure_unit]
+			$data['13_2'] = '';
+
+			//h3 
+			switch ($inputs['ambient_pressure_unit']){
+		        case 'psia':
+		        	$data['11_3'] = 'psia';
+		        	$data['h3_3_8'] = 1;
+       				$data['13_2'] = $unitsOneDefaults['psia'];
+		        break;
+
+		        case 'HGa':
+		        	$data['11_3'] = 'inches hg';
+		        	$data['h3_3_8'] = 2;
+       				$data['13_2'] = $unitsOneDefaults['HG'];
+		        break;
+
+		        case 'H2Oa':
+		        	$data['11_3'] = 'inches water';
+		        	$data['h3_3_8'] = 3;
+
+       				$data['13_2'] = $unitsOneDefaults['H20'];
+		        break;
+		        case 'mmHGa':
+		        	$data['11_3'] = 'mm hg';
+		        	$data['h3_3_8'] = 4;
+
+       				$data['13_2'] = $unitsOneDefaults['mmHG'];
+		        break;
+		        case 'kgcm2a':
+		        	$data['11_3'] = 'kg/cm2';
+		        	$data['h3_3_8'] = 5;
+
+       				$data['13_2'] = $unitsOneDefaults['kg_cm2'];
+		        break;
+		        case 'mmH2Oa':
+		        	$data['11_3'] = 'mm water';
+		        	$data['h3_3_8'] = 6;
+
+       				$data['13_2'] = $unitsOneDefaults['mmH20'];
+		        break;
+		        case 'BARa':
+		        	$data['11_3'] = 'bara';
+		        	$data['h3_3_8'] = 7;
+
+       				$data['13_2'] = $unitsOneDefaults['Bara'];
+		        break;
+		        case 'mBARa':
+		        	$data['11_3'] = 'mbara';
+		        	$data['h3_3_8'] = 8;
+
+       				$data['13_2'] = $unitsOneDefaults['mBara'];
+		        break;
+		        case 'kPAa':
+		        	$data['11_3'] = 'kPa';
+		        	$data['h3_3_8'] = 9;
+
+       				$data['13_2'] = $unitsOneDefaults['kPa'];
+		        break;
+			}
+
+			$data['label_pressure_or_elevation_unit'] = $data['11_3'];
+			
+
+	      	//###B30 = =VLOOKUP(L3,$J$25:$L$34,3)
+	      	$data['B13'] = $data['13_2'];
+	      	$data['B27'] = $defaults ['gas_inlet_pressure'];
+	      	$data['B32'] = $defaults ['gas_discharge_pressure'];
+			$unitsTwoDefaults = $this->getUnitTwoValues($data['B13'], $data['B27'], $data['B32']);
+
+	      	$data['L3_3_12'] = 1;
+	      	switch ($inputs['inlet_pressure_unit']){
+		        case 'psig':
+		        	$data['L3_3_12'] = 1;
+       				$data['B30'] = round($unitsTwoDefaults['psig'], 2);
+		        break;
+		        case 'HGg':
+		        	$data['L3_3_12'] = 2;
+					$data['B30'] = round($unitsTwoDefaults['HG'], 2);
+		        break;
+		        case 'H2Og':
+		        	$data['L3_3_12'] = 3;
+					$data['B30'] = round($unitsTwoDefaults['H20'], 2);
+		        break;
+		        case 'mmHGh':
+		        	$data['L3_3_12'] = 4;
+					$data['B30'] = round($unitsTwoDefaults['mmHG'], 2);
+		        break;
+		        case 'kgcm2g':
+		        	$data['L3_3_12'] = 5;
+					$data['B30'] = round($unitsTwoDefaults['kg_cm2'], 2);
+		        break;
+		        case 'psia':
+		        	$data['L3_3_12'] = 6;
+					$data['B30'] = round($unitsTwoDefaults['psia'], 2);
+		        break;
+		        case 'mmH2Og':
+		        	$data['L3_3_12'] = 7;
+					$data['B30'] = round($unitsTwoDefaults['mmH20'], 2);
+		        break;
+		        case 'BARg':
+		        	$data['L3_3_12'] = 8;
+					$data['B30'] = 	round($unitsTwoDefaults['Barg'], 2);
+		        break;
+		        case 'mBARg':
+		        	$data['L3_3_12'] = 9;
+					$data['B30'] = round($unitsTwoDefaults['mBarg'], 2);
+		        break;
+		        case 'kPAg':
+		        	$data['L3_3_12'] = 10;
+					$data['B30'] = round($unitsTwoDefaults['kPa'], 2);
+		        break;
+	      	}
+
+
+		} else if ($inputs['ambient_pressure_or_elevation']=="elevation_pressed"){
+			$data['label_pressure_or_elevation'] = 'Elevation';
+			$data['h2_2_8'] = 1;
+			$data['10_1'] = '';
+			$data['11_1'] = 'Elevation';
+			$data['12_1'] = '';
+			$data['10_2'] = '';
+			$data['10_3'] = '';
+			$data['12_2'] = '';
+			$data['12_3'] = '';
+			$data['7_9'] = '';	
+
+			$data ['H3'] = 1;
+			$data['label_pressure_or_elevation_unit'] = 'feet';
+
+			if ($inputs['elevation_unit']=='m'){
+				$data ['H3'] = 0;
+				$data['label_pressure_or_elevation_unit'] = 'meters';
+			}
+			//=IF(H3=1,B11,(B11*3.2808)) 
+			$data['B11']=$defaults ['elevation'];
+			$data['I7'] = '';
+			if ($data ['H3'] == 1){
+				$data['7_9'] = $defaults ['elevation'];
+				$data['I7'] = $defaults ['elevation'];
+
+			}else{
+				$data['7_9'] = $defaults ['elevation']*3.2808;
+				$data['I7'] = $defaults ['elevation']*3.2808;
+			}
+ 			//Worksheets("SIZING").Cells(13, 2).Value = "=IF(H2=1,$I$10,VLOOKUP(H3,$J$10:$L$18,3))" <=-==== will always one, so formula below applies (J10)
+			$data['13_2'] = (14.68683)+(($data['I7'])*(-0.0005299248))+((pow($data['I7'],2))*(0.0000000072))+((pow($data['I7'],3))*(3.621858E-14))+((pow($data['I7'],4))*(-3.859745E-18));
+
+		}///////// END OF ELEVATION OR AMBIENT PRESSURE BUTTON PRESSED
+
+		//J3     
+		$data['J3'] = 1;
+		if ($inputs['product_inlet_temperature_unit'] == "C"){
+			$data['J3'] = 0;
+		}
+
+		$data['B21'] = $defaults['gas_inlet_temperature'];
+
+      	//###B23
+      	if ($data['J3'] == 1){
+      		$data['B23'] = $defaults['gas_inlet_temperature'];
+      		$data['label_gas_inlet_temperature'] = '&deg;F';
+      	}else{
+      		//h23 = =$B$21*9/5+32
+      		$data['B23'] =$defaults['gas_inlet_temperature']*9/5+32;
+      		$data['label_gas_inlet_temperature'] = '&deg;C';
+      	}
+
+      	$data['B13'] = $data['13_2'];
+      	$data['B27'] = $defaults ['gas_inlet_pressure'];
+      	$data['B32'] = $defaults ['gas_discharge_pressure'];
+		$unitsTwoDefaults = $this->getUnitTwoValues($data['B13'], $data['B27'], $data['B32']);			
+
+      	switch ($inputs['inlet_pressure_unit']){
+	        case 'psig':
+   				$data['B30'] = round($unitsTwoDefaults['psig'],2);
+   				$data['label_inlet_pressure_unit'] ='PSIG';
+	        break;
+	        case 'HGg':
+				$data['B30'] = round($unitsTwoDefaults['HG'],2);
+   				$data['label_inlet_pressure_unit'] ='IN. HG';
+	        break;
+	        case 'H2Og':
+				$data['B30'] = round($unitsTwoDefaults['H20'],2);
+   				$data['label_inlet_pressure_unit'] ='IN. WATER';
+	        break;
+	        case 'mmHGh':
+				$data['B30'] = round($unitsTwoDefaults['mmHG'],2);
+   				$data['label_inlet_pressure_unit'] ='MM HG';
+	        break;
+	        case 'kgcm2g':
+				$data['B30'] = round($unitsTwoDefaults['kg_cm2'],2);
+   				$data['label_inlet_pressure_unit'] ='KG/CM<sup>2</sup>';
+	        break;
+	        case 'psia':
+				$data['B30'] = round($unitsTwoDefaults['psia'],2);
+   				$data['label_inlet_pressure_unit'] ='PSIA';
+	        break;
+	        case 'mmH2Og':
+				$data['B30'] = round($unitsTwoDefaults['mmH20'],2);
+   				$data['label_inlet_pressure_unit'] ='MM WATER';
+	        break;
+	        case 'BARg':
+				$data['B30'] = 	round($unitsTwoDefaults['Barg'],2);
+   				$data['label_inlet_pressure_unit'] ='BARg';
+	        break;
+	        case 'mBARg':
+				$data['B30'] = round($unitsTwoDefaults['mBarg'],2);
+   				$data['label_inlet_pressure_unit'] ='MBARg';
+	        break;
+	        case 'kPAg':
+				$data['B30'] = round($unitsTwoDefaults['kPa'],2);
+   				$data['label_inlet_pressure_unit'] ='KPAg';
+	        break;
+      	}	
+
+
+      	//###B35=VLOOKUP(M3,$J$25:$O$34,5)
+      	$data['M3'] = 1;
+      	switch($inputs['discharge_pressure_unit']){
+	        case 'psig':
+	        	$data['M3']=1;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_psig'], 2);
+   				$data['label_discharge_pressure_unit'] ='PSIG';
+	        break;
+	        case 'HGg':
+	        	$data['M3']=2;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_HG'], 2);
+   				$data['label_discharge_pressure_unit'] ='IN. HG';
+	        break;
+	        case 'H2Og':
+	        	$data['M3']=3;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_H20'], 2);
+   				$data['label_discharge_pressure_unit'] ='IN. WATER';
+	        break;
+	        case 'mmHGh':
+	        	$data['M3']=4;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_mmHG'], 2);
+   				$data['label_discharge_pressure_unit'] ='MM GH';
+	        break;
+	        case 'kgcm2g':
+	        	$data['M3']=5;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_kg_cm2'], 2);
+   				$data['label_discharge_pressure_unit'] ='KG/CM<sup>2</sup>';
+	        break;
+	        case 'psia':
+	        	$data['M3']=6;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_psia'], 2);
+   				$data['label_discharge_pressure_unit'] ='PSIA';
+	        break;
+	        case 'mmH2Og':
+	        	$data['M3']=7;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_mmH20'], 2);
+   				$data['label_discharge_pressure_unit'] ='MM WATER';
+	        break;
+	        case 'BARg':
+	        	$data['M3']=8;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_Barg'], 2);
+   				$data['label_discharge_pressure_unit'] ='BARg';
+	        break;
+	        case 'mBARg':
+	        	$data['M3']=9;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_mBarg'], 2);
+   				$data['label_discharge_pressure_unit'] ='MBARg';
+	        break;
+	        case 'kPAg':
+	        	$data['M3']=10;
+	        	$data['B35']=round($unitsTwoDefaults['discharge_kPa'], 2);
+   				$data['label_discharge_pressure_unit'] ='KPAg';
+	        break;
+      	}
+
+      	$data['B36'] = round(($data['B35']/$data['B30']), 2);
+
+
+		$data['I23'] =(0.0813948)+(($data['B23'])*(-0.003149847))+((pow($data['B23'],2))*(0.0001318915))+((pow($data['B23'],3))*(-0.000001078829))+((pow($data['B23'],4))*(0.000000009424192));
+
+		$data['B17'] = $defaults ['molecular_weight'];
+		$data['B39'] =$defaults ['flowrate'];
+
+		$data['L2'] = 1;
+		$data['B41'] = 0;
+
+		$data['O38'] = '';
+
+		$data['O39'] = '';
+		if ($inputs['volumetric_or_mass']=="volumetric_pressed"){
+			$data['L2'] = 1;
+			$data['I2'] = 1;
+			if (isset($inputs['saturatee'])){
+				$data['B41'] = $data['I23'];
+			}
+
+	        switch($inputs['volumetric_flowrate_unit']){
+/*
+		$data['AH114']=($data['B39']*(14.7/$data['B30'])*(460+$data['B23'])/520);
+		$data['AI114']=($data['B39']/(24*60))*(14.7/$data['B30'])*(460+$data['B23'])/520;
+		$data['AJ114']=($data['B39']*1000/(24*60))*(14.7/$data['B30'])*(460+$data['B23'])/520;
+		$data['AK114']=($data['B39']*1000000/(24*60))*(14.7/$data['B30'])*(460+$data['B23'])/520;
+		$data['AL114']=($data['B39']*35.31*(14.7/$data['B30'])*(460+$data['B23'])/520);
+		$data['AM114']=$data['B39'];
+
+*/	        	
+		        case 'scfm':
+		        	$data['N38'] = ($data['B39']*(14.7/$data['B30'])*(460+$data['B23'])/520);
+		        	$data['label_volumetric_or_mass'] = 'SCFM';
+		        break;
+		        case 'scfd':
+		        	$data['N38'] = ($data['B39']/(24*60))*(14.7/$data['B30'])*(460+$data['B23'])/520;
+		        	$data['label_volumetric_or_mass'] = 'SCFD';
+		        break;
+		        case 'mscfd':
+		        	$data['N38'] = ($data['B39']*1000/(24*60))*(14.7/$data['B30'])*(460+$data['B23'])/520;
+		        	$data['label_volumetric_or_mass'] = 'MSCFD';
+		        break;
+		        case 'mmscfd':
+		        	$data['N38'] = ($data['B39']*1000000/(24*60))*(14.7/$data['B30'])*(460+$data['B23'])/520;
+		        	$data['label_volumetric_or_mass'] = 'MMSCFD';
+		        break;
+		        case 'Sm3min':
+		        	$data['N38'] = ($data['B39']*35.31*(14.7/$data['B30'])*(460+$data['B23'])/520);
+		        	$data['label_volumetric_or_mass'] = 'M3/MIN';
+		        break;
+		        case 'icfm':
+		        	$data['N38'] = $data['B39'];
+		        	$data['label_volumetric_or_mass'] = 'ICFM';
+		        break;
+	       }
+
+	       	$data['O38'] = ($data['N38']*$data['B30'])/$data['B30']-$data['B41'];
+			$data['B42'] = round($data['O38'],1);
+			$data['B42_raw'] = $data['O38'];
+
+		} else if ($inputs['volumetric_or_mass']=="mass_pressed"){
+			$data['L2'] = 0;
+			$data['I2'] = 0;
+
+			if (isset($inputs['saturatee'])){
+				$data['B41'] = $data['I23'];
+			}
+
+		
+			switch ($inputs['mass_flowrate_unit']){
+/*		$data['AH116']=($data['B39']*1545*($data['B23']+460))/(144*$data['B30']*$data['B17']);
+		$data['AI116']==($data['B39']*1545*($data['B23']+460))/(144*$data['B30']*$data['B17']*60);
+		$data['AJ116']==(($data['B39']*2.205)*1545*($data['B23']+460))/(144*$data['B30']*$data['B17']);
+		$data['AK116']==((($data['B39']*2.205)/60)*1545*($data['B23']+460))/(144*$data['B30']*$data['B17']);
+*/
+
+		        case 'lbhr':
+		        	$data['N39'] = ($data['B39']*1545*($data['B23']+460))/(144*$data['B30']*$data['B17']);
+		        	$data['label_volumetric_or_mass'] = 'LB/HR';
+		        break;
+		        case 'lbmin':
+		        	$data['N39'] = ($data['B39']*1545*($data['B23']+460))/(144*$data['B30']*$data['B17']*60);
+		        	$data['label_volumetric_or_mass'] = 'LB/MIN';
+		        break;
+		        case 'kghr':
+		        	$data['N39'] = (($data['B39']*2.205)*1545*($data['B23']+460))/(144*$data['B30']*$data['B17']);
+		        	$data['label_volumetric_or_mass'] = 'KG/HR';
+		        break;
+		        case 'kgmin':
+		        	$data['N39'] = ((($data['B39']*2.205)/60)*1545*($data['B23']+460))/(144*$data['B30']*$data['B17']);
+					$data['label_volumetric_or_mass'] = 'KG/MIN';
+		        break;
+
+			}
+
+			$data['O39'] =($data['N39']*$data['B30'])/$data['B30']-$data['B41'];//N39*($B$30)/($B$30-$B$41)
+			$data['B42'] = round($data['O39'],1);
+		}
+
+		$data['K3'] = 1;
+		$data['label_coolant_temperature'] = '&deg;F';
+		if ($inputs['coolant_inlet_temperature_unit'] == 'C'){
+			$data['K3'] = 0;
+			$data['label_coolant_temperature'] = '&deg;C';
+		}
+
+		$data['B44'] = $defaults ['coolant_temperature'];
+		$data['H44'] =$data['B44'];
+		$data['H45'] =$data['B44']*9/5+32;
+
+		//###B46
+		$data['B46']= number_format($data['H44'], 1, '.', '');
+		if ($data['K3']==0)
+			$data['B46']= number_format($data['H45'], 1, '.', '');
+
+		$data['available_sizes'] = \DB::table('Compressordatabases')->select('size')->distinct()->get(); 
+		return view('maindialogs/inputs', $data);
+	}
+
+	function getTableArrayValues($comporessorRowData, $data, $inputs){
+		$tableArray['table_array_AI'] = round (( $comporessorRowData->air_ve_part_1 - ( $comporessorRowData->air_ve_part_2 * $tableArray['B36']) ) /100, 2);
+		$tableArray['table_array_AI_not_rounded'] =( $comporessorRowData->air_ve_part_1 - ( $comporessorRowData->air_ve_part_2 * $tableArray['B36']) ) /100;
+
+		$tableArray['table_array_AK'] = $tableArray['table_array_AI'];
+
+		//=(100-(((100-(AI36*100))*((($H$18)^0.5))+(($B$36)^($H$19))-1)))/100
+		$tableArray['table_array_AJ'] = round((100-(( (100-($tableArray['table_array_AI']*100)) * pow($tableArray['H18'],0.5) + pow($tableArray['B36'],$tableArray['H19']) -1) ))/100, 2);
+		
+		if ($tableArray['P3']==0) {
+			$tableArray['table_array_AK'] = $tableArray['table_array_AJ'];
+		}
+
+		/*if fixed_speed has no value, table_array AL-AO*/
+		$tableArray['table_array_AL'] = (1*$inputs['compressor_flow_capacity']*$comporessorRowData->nom_rpm)/($comporessorRowData->displ_capacity * $tableArray['table_array_AI_not_rounded'] );
+
+		//=$AE10*((AL10/$AF10)^2)
+		$tableArray['table_array_AM']	= $comporessorRowData->emp_hp_factor * ( pow( ( $tableArray['table_array_AL'] / $comporessorRowData->nom_rpm ), 2 ) );
+
+		//=((144*$B$19)/(33000*($B$19-1)))*((($B$36^$I$19)-1)*($B$30*$AD10*(AL10/$AF10)))
+		$tableArray['table_array_AN']	= ((144*$inputs['cp_cv'])/(33000*($inputs['cp_cv']-1)))*(((
+			pow($tableArray['B36'],$tableArray['I19'])
+			)-1)*($inputs['inlet_pressure']*$comporessorRowData->HP_displ*($tableArray['table_array_AL']/$comporessorRowData->nom_rpm)));
+
+		$tableArray['table_array_AO']	= $tableArray['table_array_AM'] +$tableArray['table_array_AN'];
+		//=$AE10*((AQ10/$AF10)^2)
+
+		/*if fixed_speed has value table_array AQ-AX*/
+		$tableArray['table_array_AQ'] = 0;
+		if ($inputs['speed_fixed_or_not'] == 1){
+			$tableArray['table_array_AQ']=$inputs['fixed_speed'];
+		}
+
+		//this is just copying values 
+		$tableArray['table_array_AR'] = $tableArray['table_array_AI'];
+		$tableArray['table_array_AR_not_rounded'] = $tableArray['table_array_AI_not_rounded'];
+		$tableArray['table_array_AS'] = $tableArray['table_array_AJ'];
+		$tableArray['table_array_AT'] = $tableArray['table_array_AK'];
+
+		//=$AE10*((AQ10/$AF10)^2)
+		$tableArray['table_array_AU']	= $comporessorRowData->emp_hp_factor * ( pow( ( $tableArray['table_array_AQ']/ $comporessorRowData->nom_rpm ), 2 ) );
+		$tableArray['table_array_AV']	= ((144*$inputs['cp_cv'])/(33000*($inputs['cp_cv']-1)))*(((
+			pow($tableArray['B36'],$tableArray['I19'])
+			)-1)*($inputs['inlet_pressure']*$comporessorRowData->HP_displ*($tableArray['table_array_AQ']/$comporessorRowData->nom_rpm)));
+		$tableArray['table_array_AW']	= $tableArray['table_array_AU'] +$tableArray['table_array_AV'];
+		//=(AQ10*AC10*AT10)/(AF10)
+		$tableArray['table_array_AX']	= ($tableArray['table_array_AQ'] *$comporessorRowData->displ_capacity*$tableArray['table_array_AT'])/($comporessorRowData->nom_rpm);
+
+		//=IF(AL10>$AG10,$AI$118,IF(AL10<$AH10,$AI$119,$AM$119))
+		$tableArray['table_array_AY'] = '';
+		if ($tableArray['table_array_AL'] > $comporessorRowData->max_rpm)
+			$tableArray['table_array_AY'] = 'Too Fast';
+		else if ($tableArray['table_array_AL'] < $comporessorRowData->min_rpm)
+			$tableArray['table_array_AY'] = 'Too Slow';
+
+		$tableArray['table_array_AZ'] = '';
+		if ($tableArray['table_array_AQ'] > $comporessorRowData->max_rpm)
+			$tableArray['table_array_AZ'] = 'Too Fast';
+		else if ($tableArray['table_array_AQ'] < $comporessorRowData->min_rpm)
+			$tableArray['table_array_AZ'] = 'Too Slow';
+
+		return $tableArray;
+	}
+
+
+	public function inputFormSubmitted(){
+		$data['inputs'] ='';
+		$inputs = \Request::input();
+
+		$Cp = \App\Compressordatabase::all(); 
+		//echo $Cp->count();
+
+		$data['H18'] = 1/ $inputs['specific_gravity'];
+		$data['H19'] = 1/ $inputs['cp_cv'];
+		$data['B36'] = $inputs['compression_ratio'];
+
+		//=($B$19-1)/$B$19
+		$data['I19'] = ($inputs['cp_cv']-1)/$inputs['cp_cv'];
+
+		$data['P3']=0;
+		if ($inputs['name_of_gas']=='Air'){
+			$data['P3']=1;
+		}
+
+/*		$data['C65']='';
+		$data['C72']='';*/
+		for ($i=1; $i<=$Cp->count(); $i++){
+			
+			//=(97.1-(3.5*$B$36))/100
+			$data['table_array_AI'] = round (( $Cp[$i-1]->air_ve_part_1 - ( $Cp[$i-1]->air_ve_part_2 * $data['B36']) ) /100, 2);
+			$data['table_array_AI_not_rounded'] =( $Cp[$i-1]->air_ve_part_1 - ( $Cp[$i-1]->air_ve_part_2 * $data['B36']) ) /100;
+
+			$data['table_array_AK'] = $data['table_array_AI'];
+
+			//=(100-(((100-(AI36*100))*((($H$18)^0.5))+(($B$36)^($H$19))-1)))/100
+			$data['table_array_AJ'] = round((100-(( (100-($data['table_array_AI']*100)) * pow($data['H18'],0.5) + pow($data['B36'],$data['H19']) -1) ))/100, 2);
+			
+			if ($data['P3']==0) {
+				$data['table_array_AK'] = $data['table_array_AJ'];
+			}
+
+			/*if fixed_speed has no value, table_array AL-AO*/
+			$data['table_array_AL'] = (1*$inputs['compressor_flow_capacity']*$Cp[$i-1]->nom_rpm)/($Cp[$i-1]->displ_capacity * $data['table_array_AI_not_rounded'] );
+
+			//=$AE10*((AL10/$AF10)^2)
+			$data['table_array_AM']	= $Cp[$i-1]->emp_hp_factor * ( pow( ( $data['table_array_AL'] / $Cp[$i-1]->nom_rpm ), 2 ) );
+
+			//=((144*$B$19)/(33000*($B$19-1)))*((($B$36^$I$19)-1)*($B$30*$AD10*(AL10/$AF10)))
+			$data['table_array_AN']	= ((144*$inputs['cp_cv'])/(33000*($inputs['cp_cv']-1)))*(((
+				pow($data['B36'],$data['I19'])
+				)-1)*($inputs['inlet_pressure']*$Cp[$i-1]->HP_displ*($data['table_array_AL']/$Cp[$i-1]->nom_rpm)));
+
+			$data['table_array_AO']	= $data['table_array_AM'] +$data['table_array_AN'];
+			//=$AE10*((AQ10/$AF10)^2)
+
+			/*if fixed_speed has value table_array AQ-AX*/
+			$data['table_array_AQ'] = 0;
+			if ($inputs['speed_fixed_or_not'] == 1){
+				$data['table_array_AQ']=$inputs['fixed_speed'];
+			}
+
+			//this is just copying values 
+			$data['table_array_AR'] = $data['table_array_AI'];
+			$data['table_array_AR_not_rounded'] = $data['table_array_AI_not_rounded'];
+			$data['table_array_AS'] = $data['table_array_AJ'];
+			$data['table_array_AT'] = $data['table_array_AK'];
+
+			//=$AE10*((AQ10/$AF10)^2)
+			$data['table_array_AU']	= $Cp[$i-1]->emp_hp_factor * ( pow( ( $data['table_array_AQ']/ $Cp[$i-1]->nom_rpm ), 2 ) );
+			$data['table_array_AV']	= ((144*$inputs['cp_cv'])/(33000*($inputs['cp_cv']-1)))*(((
+				pow($data['B36'],$data['I19'])
+				)-1)*($inputs['inlet_pressure']*$Cp[$i-1]->HP_displ*($data['table_array_AQ']/$Cp[$i-1]->nom_rpm)));
+			$data['table_array_AW']	= $data['table_array_AU'] +$data['table_array_AV'];
+			//=(AQ10*AC10*AT10)/(AF10)
+			$data['table_array_AX']	= ($data['table_array_AQ'] *$Cp[$i-1]->displ_capacity*$data['table_array_AT'])/($Cp[$i-1]->nom_rpm);
+
+			//=IF(AL10>$AG10,$AI$118,IF(AL10<$AH10,$AI$119,$AM$119))
+			$data['table_array_AY'] = '';
+			if ($data['table_array_AL'] > $Cp[$i-1]->max_rpm)
+				$data['table_array_AY'] = 'Too Fast';
+			else if ($data['table_array_AL'] < $Cp[$i-1]->min_rpm)
+				$data['table_array_AY'] = 'Too Slow';
+
+			$data['table_array_AZ'] = '';
+			if ($data['table_array_AQ'] > $Cp[$i-1]->max_rpm)
+				$data['table_array_AZ'] = 'Too Fast';
+			else if ($data['table_array_AQ'] < $Cp[$i-1]->min_rpm)
+				$data['table_array_AZ'] = 'Too Slow';
+
+			//AA Value, last determiner
+			if ($data['table_array_AL'] > $Cp[$i-1]->min_rpm && $data['table_array_AL'] < $Cp[$i-1]->max_rpm){
+				$data['table_array_AA'] = $Cp[$i-1]->aa_value;
+				if ($inputs['booster_select']==1){
+					if ($data['table_array_AA'] == '2') {
+/*						echo '2 found size='.$Cp[$i-1]->size.'value = '.$Cp[$i-1]->aa_value;
+						echo '<hr>';
+*/						$data['C65']=$Cp[$i-1]->size;
+						$data['C72']=$data['table_array_AL'];
+						break;
+					}
+				}else{
+					if ($data['table_array_AA'] == '1'){
+						echo 'airve1='.$Cp[$i-1]->air_ve_part_1.'<br>';
+						echo 'airve2='.$Cp[$i-1]->air_ve_part_2.'<br>';
+
+						echo 'CFP='.$inputs['compressor_flow_capacity'].'<br>';
+						echo 'AI raw='.$data['table_array_AI_not_rounded'].'<br>';
+						echo 'AI='.$data['table_array_AI'].'<br>';
+						echo 'AJ='.$data['table_array_AJ'].'<br>';
+						echo 'AK='.$data['table_array_AK'].'<br>';
+						echo 'AM='.$data['table_array_AM'].'<br>';
+						echo 'AN='.$data['table_array_AN'].'<br>';
+
+						$data['C65']=$Cp[$i-1]->size;
+						$data['C72']=$data['table_array_AL'];
+
+						//D72=IF($B$53=0,VLOOKUP($C$65,$AB$10:$BA$89,24),VLOOKUP($C$65,$AB$10:$BA$89,25))
+						//C74=IF($B$53=0,$B$42,VLOOKUP($C$65,$AB$10:$AY$89,23))
+						//C118=IF($B$53=0,VLOOKUP($C$65,$AB$10:$AY$89,8),VLOOKUP($C$65,$AB$10:$AY$89,17))
+
+						$data['C74']=0;
+						if($inputs['speed_fixed_or_not']==0){
+							$data['C74'] = $inputs['compressor_flow_capacity'];
+							$data['D72'] = $data['table_array_AY'];
+							$data['C79'] = $data['table_array_AO'];
+							$data['C118'] = $data['table_array_AI_not_rounded'];
+						}else{
+							$data['C74'] = $data['table_array_AX'];
+							$data['D72']=$data['table_array_AZ'];
+							$data['C79'] = $data['table_array_AW'];	
+							$data['C118'] = $data['table_array_AR_not_rounded'];
+						}
+
+						//C75 =$K$41 = =C74*($B$30/14.7)*(520/($B$23+460))
+						$data['C75'] = $data['C74']*($inputs['inlet_pressure']/14.7)*(520/($inputs['inlet_temperature']+460));
+						$data['K41'] = $data['C75'];
+
+						//C79=IF($B$53=0,VLOOKUP($C$65,$AB$10:$AY$89,14),VLOOKUP($C$65,$AB$10:$AY$89,22))
+						//already done above with c74 and d72
+
+						//=C79*0.7457
+						$data['C80'] = $data['C79'] *0.7457;
+
+						$data['C82'] = $inputs['inlet_temperature'];
+						//C85 = M10 = B13 
+						$data['M10'] = $inputs['ambient_pressure'];
+						$data['C85'] = $data['M10'];
+						$data['C90'] = $inputs['inlet_pressure'];
+
+						//C91 = M25 = =$L$22-$B$13   //// L22 = =B30
+						$data['C91'] = $inputs['inlet_pressure']-$inputs['ambient_pressure'];
+
+						//C96 = I36 = =I34+I35 
+						//I35 =(B46-60)/2
+						//I34 =I33-460
+						//I33 =($B$23+460)*$B$36^$I$19
+						$data['I33'] = ($inputs['inlet_temperature']+460)* (pow($inputs['compression_ratio'], $data['I19']));
+						$data['I34'] = $data['I33']-460;
+						$data['I35'] = ($inputs['coolant_inlet_temperature']-60)/2;
+						$data['I36'] = $data['I34'] + $data['I35'];
+						$data['C96'] = $data['I36'];
+						//D96=IF(C$96>350,$AI$120,$AH$120)
+						$data['D96'] = '';
+						if ($data['C96'] > 350 ) $data['D96'] = 'Too Hot';
+
+						$data['C99'] = $inputs['discharge_pressure'];
+
+						//C100 = O25 = B35-B13
+						$data['C100'] = $inputs['discharge_pressure']-$inputs['ambient_pressure'];
+
+						$data['C105'] = $inputs['compression_ratio'];
+
+						$data['C107'] = $inputs['discharge_pressure']-$inputs['inlet_pressure'];
+
+						//=IF(AND(B49=0,C107>45),$AM$121,IF(C107>110,$AM$121,$AM$119))
+
+						if ($inputs['booster_select']==0 && $data['C107']>45)
+							$data['D107'] = 'HIGH';
+						else if ($data['C107']>110)
+							$data['D107'] = 'HIGH';
+						else							
+							$data['D107'] = '';
+
+						$data['C112'] = $inputs['coolant_inlet_temperature'];
+
+						//C115=$C$79*0.08467
+						$data['C115'] = $data['C79']*0.08467;
+
+						//C116=$C$115/0.85
+						$data['C116'] = $data['C115']/0.85;
+
+						//C118 =IF($B$53=0,VLOOKUP($C$65,$AB$10:$AY$89,8),VLOOKUP($C$65,$AB$10:$AY$89,17))
+						//already done above with c74 and d72
+
+						//C121 =VLOOKUP($C$65,$AB$10:$BO$89,29)
+						//table_array_BD=($B$35-$B$30)*((BB10/BC10)^2)
+						$data['table_array_BD'] = ($data['C100'])*
+						   ( 
+							pow(($Cp[$i-1]->standout/$Cp[$i-1]->blade_thickness),2)
+
+							);
+						$data['C121'] = $data['table_array_BD'];
+
+						//D121 =IF(C$121>=2500,$AM$120,$AM$119)
+						$data['D121'] = '';
+						if ($data['C121']>2500)
+							$data['D121'] = 'TOO HIGH';
+
+						//C123 = H67 =(M89*5250)/C72
+						//M89 =K89+L89
+							//K89 =$I$63*((E72/$I$61)^2)
+
+								//I63 =VLOOKUP($I$58,$AB$10:$BX$89,4)<== lookup for $inputs['manual_selection'], return emp_HP_factor in database
+								//I58 =E65
+								//E65 =$B$52
+								//B52 = manual_selection input
+
+								//E72 =IF($B$53=0,VLOOKUP($E$65,$AB$10:$AY$89,11),VLOOKUP($E$65,$AB$10:$AY$89,16))
+
+								//I61 =VLOOKUP($I$58,$AB$10:$BX$89,5)<== lookup for $inputs['manual_selection'], return nom_rpm in database
+
+							//L89 =((144*$B$19)/(33000*($B$19-1)))*((($J$89^$I$19)-1)*($B$30*$I$64*(E72/$I$60)))
+								//B19 B30 are known inputs
+								//E72 I19 already calculated in previous formulas
+								//J89 =(B30+8)/B30
+								//I64 =VLOOKUP($I$58,$AB$10:$BX$89,3)<== I58 is known, vlookup to return HP_displ
+								//I60 =VLOOKUP($I$58,$AB$10:$BX$89,6)<== vlookup to return HP_displ max_rpm
+
+
+						$data['B52'] = $inputs['manual_selection'];
+						$data['E65'] = $data['B52'];
+						$data['I58'] = $data['E65'];
+
+						//retrieve the info of compressor, selected by manual selection
+						$manual_selection_row = \DB::table('Compressordatabases')->where('size',  $data['I58'])->first();
+						$data['I59'] = $manual_selection_row->min_rpm;
+						$data['I60'] = $manual_selection_row->max_rpm;
+						$data['I61'] = $manual_selection_row->nom_rpm;
+						$data['I62'] = $manual_selection_row->displ_capacity;
+						$data['I63'] = $manual_selection_row->emp_hp_factor;
+						$data['I64'] = $manual_selection_row->HP_displ;
+						$data['I69'] = $manual_selection_row->volumetric_a;
+						$data['I70'] = $manual_selection_row->volumetric_b;
+
+						//E72 =IF($B$53=0,VLOOKUP($E$65,$AB$10:$AY$89,11),VLOOKUP($E$65,$AB$10:$AY$89,16))
+						$data['manual_table_array_AI'] = round (( $manual_selection_row->air_ve_part_1 - ( $manual_selection_row->air_ve_part_2 * $data['B36']) ) /100, 2);
+						$data['manual_table_array_AI_not_rounded'] =( $manual_selection_row->air_ve_part_1 - ( $manual_selection_row->air_ve_part_2 * $data['B36']) ) /100;
+
+						$data['manual_table_array_AK'] = $data['manual_table_array_AI'];
+
+						$data['manual_table_array_AJ'] = round((100-(( (100-($data['manual_table_array_AI']*100)) * pow($data['H18'],0.5) + pow($data['B36'],$data['H19']) -1) ))/100, 2);
+						
+						if ($data['P3']==0) {
+							$data['manual_table_array_AK'] = $data['manual_table_array_AJ'];
+						}
+
+						$data['manual_table_array_AL'] = (1*$inputs['compressor_flow_capacity']*$manual_selection_row->nom_rpm)/($manual_selection_row->displ_capacity * $data['manual_table_array_AI_not_rounded'] );
+
+						$data['E72'] = $data['manual_table_array_AL'];
+						if($inputs['speed_fixed_or_not']==0){
+							$data['E72'] = $data['manual_table_array_AQ'];
+						}
+
+						$data['K89'] = $data['I63']*(pow(($data['E72'] / $data['I61']),2));
+
+
+						$data['J89'] = ($inputs['inlet_pressure']+8)/$inputs['inlet_pressure'];
+						$data['L89'] = ((144*$inputs['cp_cv'])/(33000*($inputs['cp_cv']-1)))*((
+							( pow($data['J89'],$data['I19']) )
+							-1)*($inputs['inlet_pressure']*$data['I64']*($data['E72']/$data['I60'])));
+
+						$data['M89'] = $data['K89']+$data['L89'];
+						$data['C123'] = ($data['M89']*5250)/$data['C72'];
+
+						//if > < condition found exit loop
+						break;
+					} 
+				}
+			}
+		}
+		
+		//=IF($B$53=0,VLOOKUP($C$65,$AB$10:$AY$89,11),VLOOKUP($C$65,$AB$10:$AY$89,16))		
+
+		echo 'C65='.$data['C65'].'<br>';
+		echo 'C72='.round($data['C72'],2).'<br>';
+		echo 'D72='.$data['D72'].'<br>';
+		echo 'C74='.round($data['C74'],2).'<br>';
+		echo 'C75='.round($data['C75'],2).'<br>';
+		echo 'C79='.$data['C79'].'<br>';
+		echo 'C80='.$data['C80'].'<br>';
+		echo 'C82='.$data['C82'].'<br>';
+		echo 'C85='.$data['C85'].'<br>';
+		echo 'C90='.$data['C90'].'<br>';
+		echo 'C91='.$data['C91'].'<br>';
+		echo 'C96='.$data['C96'].'<br>';
+		echo 'C100='.$data['C100'].'<br>';
+		echo 'C105='.$data['C105'].'<br>';
+		echo 'C107='.$data['C107'].'<br>';
+		echo 'D107='.$data['D107'].'<br>';
+		echo 'C112='.$data['C112'].'<br>';
+		echo 'C115='.$data['C115'].'<br>';
+		echo 'C116='.$data['C116'].'<br>';
+		echo 'C118='.$data['C118'].'<br>';//format as %
+		echo 'C121='.$data['C121'].'<br>';
+
+		echo 'I58='.$data['I58'].'<br>';
+		echo 'I59='.$data['I59'].'<br>';
+		echo 'I60='.$data['I60'].'<br>';
+		echo 'I61='.$data['I61'].'<br>';
+		echo 'I62='.$data['I62'].'<br>';
+		echo 'I63='.$data['I63'].'<br>';
+		echo 'I64='.$data['I64'].'<br>';
+		echo 'I69='.$data['I69'].'<br>';
+		echo 'I70='.$data['I70'].'<br>';
+		echo 'E72='.$data['E72'].'<br>';
+		echo 'K89='.$data['K89'].'<br>';
+		echo 'C123='.$data['C123'].'<br>';
+
+		echo '<hr>';
+		foreach ($inputs as $key => $value)
+			$data['inputs'] .= $key.' = '.$value.'<br>';
+
+		echo $data['inputs'];
+/*		return view('output/results', $data);
+*/	}
+
+}
