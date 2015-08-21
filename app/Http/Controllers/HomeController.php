@@ -1,5 +1,5 @@
 <?php namespace App\Http\Controllers;
-
+use Auth;
 class HomeController extends Controller {
 
 	/*
@@ -30,7 +30,15 @@ class HomeController extends Controller {
 	 */
 	public function index()
 	{
-		return view('home');
+		$user = Auth::user();
+
+		if ($user->activated == '1')
+			return view ('home');
+		else{
+			Auth::logout();
+			return view('auth/login')->with('regsuccess', 
+				'Access Request sent succesfully. We will review and get back to you as soon as possible');
+		}
 	}
 
 	public function dwpdf()	{

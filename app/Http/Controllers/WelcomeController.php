@@ -34,7 +34,7 @@ class WelcomeController extends Controller {
 		///auth/login
 		if (\Auth::check()){
     		// The user is logged in...
-			return view('welcome');
+    		return view('welcome');
 		} else return view('auth/login');
 	}
 

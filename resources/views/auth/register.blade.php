@@ -57,63 +57,63 @@
                             <div class="form-group">
                                 <label class="col-md-4 control-label">First Name</label>
                                 <div class="col-md-6">
-                                    <input type="text" class="form-control" name="name" value="{{ old('name') }}">
+                                    {!! Form::text('name', null, ['class' => 'form-control']) !!}
                                 </div>
                             </div>
     
                             <div class="form-group">
                                 <label class="col-md-4 control-label">Last Name</label>
                                 <div class="col-md-6">
-                                    <input type="text" class="form-control" name="last_name" value="{{ old('last_name') }}">
+                                    {!! Form::text('last_name', null, ['class' => 'form-control']) !!}
                                 </div>
                             </div>
                             
                             <div class="form-group">
                                 <label class="col-md-4 control-label">Company</label>
                                 <div class="col-md-6">
-                                    <input type="text" class="form-control" name="company" value="{{ old('company') }}">
+                                    {!! Form::text('company', null, ['class' => 'form-control']) !!}
                                 </div>
                             </div>
     
                             <div class="form-group">
                                 <label class="col-md-4 control-label">Address</label>
                                 <div class="col-md-6">
-                                    <input type="text" class="form-control" name="address" value="{{ old('address') }}">
+                                    {!! Form::text('address', null, ['class' => 'form-control']) !!}
                                 </div>
                             </div>
                             
                             <div class="form-group">
                                 <label class="col-md-4 control-label">City, State</label>
                                 <div class="col-md-6">
-                                    <input type="text" class="form-control" name="city_state" value="{{ old('city_state') }}">
+                                    {!! Form::text('city_state', null, ['class' => 'form-control']) !!}
                                 </div>
                             </div>
                             
                             <div class="form-group">
                                 <label class="col-md-4 control-label">Country</label>
                                 <div class="col-md-6">
-                                    <input type="text" class="form-control" name="country" value="{{ old('country') }}">
+                                    {!! Form::text('country', null, ['class' => 'form-control']) !!}
                                 </div>
                             </div>
                             
                             <div class="form-group">
                                 <label class="col-md-4 control-label">Phone</label>
                                 <div class="col-md-6">
-                                    <input type="text" class="form-control" name="phone" value="{{ old('phone') }}">
+                                    {!! Form::text('phone', null, ['class' => 'form-control']) !!}
                                 </div>
                             </div>
     
                             <div class="form-group">
                                 <label class="col-md-4 control-label">E-Mail Address</label>
                                 <div class="col-md-6">
-                                    <input type="email" class="form-control" name="email" value="{{ old('email') }}">
+                                    {!! Form::text('email', null, ['class' => 'form-control']) !!}
                                 </div>
                             </div>
     
                             <div class="form-group">
                                 <label class="col-md-4 control-label">Confirm Email</label>
                                 <div class="col-md-6">
-                                    <input type="email" class="form-control" name="email_confirmation" value="{{ old('email_confirmation') }}">
+                                    {!! Form::text('email_confirmation', null, ['class' => 'form-control']) !!}
                                 </div>
                             </div>
     
@@ -178,7 +178,7 @@
                             
                             
                             <br><br>
-                            <div class="form-group">
+<!--                            <div class="form-group">
                                 <label class="col-md-4 control-label">Password</label>
                                 <div class="col-md-6">
                                     <input type="password" class="form-control" name="password">
@@ -190,13 +190,13 @@
                                 <div class="col-md-6">
                                     <input type="password" class="form-control" name="password_confirmation">
                                 </div>
-                            </div>
+                            </div>-->
 
 
                             <div class="form-group">
                                 <div class="col-md-6 col-md-offset-4">
                                     <button type="submit" class="btn btn-primary" style="width:300px; margin-top:20px;">
-                                        Send
+                                        Send Request
                                     </button>
                                 </div>
                             </div>

@@ -17,7 +17,7 @@ class Registrar implements RegistrarContract {
 		return Validator::make($data, [
 			'name' => 'required|max:255',
 			'email' => 'required|email|confirmed|max:255|unique:users',
-			'last_name' => 'required|max:255',
+/*			'last_name' => 'required|max:255',
 			'company' => 'required|max:255',
 			'address' => 'required|max:255',
 			'city_state' => 'required|max:255',
@@ -26,7 +26,7 @@ class Registrar implements RegistrarContract {
 			'user_type' => 'required|max:255',
 			'primary_industry' => 'required|max:255',
 			'password' => 'required|confirmed|min:6',
-		]);
+*/		]);
 	}
 
 	/**
@@ -51,7 +51,12 @@ class Registrar implements RegistrarContract {
 			'primary_industry' => $data['primary_industry'],
 			'primary_industry_other' => $data['primary_industry_other'],
 			'email' => $data['email'],
+/*
+			disable password due to requiring manual activation instead of auto
 			'password' => bcrypt($data['password']),
+*/			'password' => bcrypt('random1p3a1ssword'),
+			'activated' => '0', //0 is off, 1 is activated
+			'user_level' => 99, //regular user = 99, admin = 1, admin level2 = 2 and so on
 		]);
 	}
 

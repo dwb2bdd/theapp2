@@ -18,6 +18,7 @@
 					</div>
                 </div>
 				<div class="panel-body">
+
 					@if (count($errors) > 0)
 						<div class="alert alert-danger">
 							<strong>Whoops!</strong> There were some problems with your input.<br><br>
@@ -28,7 +29,12 @@
 							</ul>
 						</div>
 					@endif
-                    
+                    @if (isset($regsuccess))
+                        <div class="alert alert-success">
+                              {{ $regsuccess }}  
+                        </div>
+                    @endif
+
                 	<div class="row">
                         <div class="col-md-6">
                              <form class="form-horizontal" role="form" method="POST" action="{{ url('/auth/login') }}">
@@ -69,11 +75,11 @@
                         </div>
     
                         <div class="col-md-6">
-                            <a href="{{ url('/registerUser') }}">New user? Click here to request access.</a>
+                            <a href="{{ url('/auth/register') }}">New user? Click here to request access.</a>
                         </div>
                         
                         <div class="col-md-12 col-md-offset-2">
-                            <p>You must have a valid userid and password to accesss the compressor sizing program. <a href="{{ url('/registerUser') }}">Apply here</a></p>
+                            <p>You must have a valid userid and password to accesss the compressor sizing program. <a href="{{ url('/auth/register') }}">Apply here</a></p>
                             <p>Read our <a href="#" id="userAgreementLink">user agreement.</a></p>
                         </div>                        
                         

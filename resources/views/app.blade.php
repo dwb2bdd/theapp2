@@ -59,13 +59,16 @@
 					<li><a href="{{ url('/') }}">Home</a></li>
 					<li><a href="{{ url('/compressor') }}">New Sizing</a></li>
 					<li><a href="{{ url('/load') }}">Load Sizing</a></li>
+                    
+                    @if (Auth::user()->user_level == 1)
+						<li><a href="{{ url('/adminPanel') }}">Admin Panel</a></li>
+                    @endif
 				</ul>
 				@endif
 
 				<ul class="nav navbar-nav navbar-right">
 					@if (Auth::guest())
 						<li><a href="{{ url('/auth/login') }}">Login</a></li>
-						<!-- <li><a href="{{ url('/auth/register') }}">Register</a></li> -->
 					@else
 						<li class="dropdown">
 							<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">{{ Auth::user()->name }} <span class="caret"></span></a>
